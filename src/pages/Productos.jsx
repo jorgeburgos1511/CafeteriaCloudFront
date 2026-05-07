@@ -1,76 +1,40 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import MainLayout from '../layouts/MainLayout'
-import latte from '../assets/images/latte.jpg'
-import capuccino from '../assets/images/capuccino.jpg'
-import sandwich from '../assets/images/sandwich.jpg'
-import panini from '../assets/images/panini.jpg'
-
-const productosIniciales = [
-  {
-    id: 1,
-    nombre: 'Café Latte',
-    categoria: 'Bebida',
-    precio: '$45',
-    stock: 12,
-    imagen: latte,
-  },
-  {
-    id: 2,
-    nombre: 'Capuccino',
-    categoria: 'Bebida',
-    precio: '$40',
-    stock: 8,
-    imagen: capuccino,
-  },
-  {
-    id: 3,
-    nombre: 'Sandwich',
-    categoria: 'Comida',
-    precio: '$55',
-    stock: 6,
-    imagen: sandwich,
-  },
-  {
-    id: 4,
-    nombre: 'Panini',
-    categoria: 'Comida',
-    precio: '$60',
-    stock: 10,
-    imagen: panini,
-  },
-]
+import { getProductos, createProducto } from '../api/productosApi'
 
 function Productos() {
-  const [productos, setProductos] = useState(productosIniciales)
+  const [productos, setProductos] = useState([])
   const [nombre, setNombre] = useState('')
   const [categoria, setCategoria] = useState('Bebida')
   const [precio, setPrecio] = useState('')
-  const [stock, setStock] = useState('')
   const [filtro, setFiltro] = useState('Todos')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const crearProducto = () => {
-    if (!nombre || !precio || !stock) return
+  useEffect(() => {
+    getProductos()
+      .then(setProductos)
+      .catch(() => setError('Error al cargar productos'))
+      .finally(() => setLoading(false))
+  }, [])
 
-    const nuevoProducto = {
-      id: Date.now(),
-      nombre,
-      categoria,
-      precio: `$${precio}`,
-      stock: Number(stock),
-      imagen: null,
+  const crearProducto = async () => {
+    if (!nombre || !precio) return
+    try {
+      const nuevo = await createProducto({ nombre, categoria, precio })
+      setProductos([nuevo, ...productos])
+      setNombre('')
+      setCategoria('Bebida')
+      setPrecio('')
+    } catch (e) {
+      alert(e.message)
     }
-
-    setProductos([nuevoProducto, ...productos])
-    setNombre('')
-    setCategoria('Bebida')
-    setPrecio('')
-    setStock('')
   }
 
   const productosFiltrados =
     filtro === 'Todos'
       ? productos
-      : productos.filter((producto) => producto.categoria === filtro)
+      : productos.filter((p) => p.category === filtro)
 
   return (
     <MainLayout>
@@ -102,14 +66,6 @@ function Productos() {
           className="w-full rounded border p-2 md:w-1/5"
         />
 
-        <input
-          type="number"
-          placeholder="Stock"
-          value={stock}
-          onChange={(e) => setStock(e.target.value)}
-          className="w-full rounded border p-2 md:w-1/5"
-        />
-
         <button
           onClick={crearProducto}
           className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
@@ -124,9 +80,7 @@ function Productos() {
             key={tipo}
             onClick={() => setFiltro(tipo)}
             className={`rounded px-3 py-1 ${
-              filtro === tipo
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-800'
+              filtro === tipo ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
             }`}
           >
             {tipo}
@@ -134,48 +88,37 @@ function Productos() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {productosFiltrados.map((producto) => (
-          <div
-            key={producto.id}
-            className="overflow-hidden rounded-xl bg-white shadow"
-          >
-            {producto.imagen ? (
-              <img
-                src={producto.imagen}
-                alt={producto.nombre}
-                className="h-48 w-full object-cover"
-              />
-            ) : (
+      {loading ? (
+        <p className="text-slate-500">Cargando productos...</p>
+      ) : error ? (
+        <p className="text-red-500">{error}</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {productosFiltrados.map((producto) => (
+            <div key={producto.id} className="overflow-hidden rounded-xl bg-white shadow">
               <div className="flex h-48 items-center justify-center bg-slate-200 text-slate-500">
-                Espacio para imagen
+                {producto.category}
               </div>
-            )}
 
-            <div className="p-4">
-              <h2 className="text-xl font-bold text-slate-800">
-                {producto.nombre}
-              </h2>
+              <div className="p-4">
+                <h2 className="text-xl font-bold text-slate-800">{producto.name}</h2>
 
-              <p className="mt-2 text-sm text-slate-500">
-                Categoría: {producto.categoria}
-              </p>
+                <p className="mt-2 text-sm text-slate-500">
+                  Categoría: {producto.category}
+                </p>
 
-              <p className="mt-1 text-sm text-slate-500">
-                Stock: {producto.stock}
-              </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Disponible: {producto.available ? 'Sí' : 'No'}
+                </p>
 
-              <p className="mt-3 text-lg font-semibold text-green-700">
-                {producto.precio}
-              </p>
-
-              <button className="mt-4 w-full rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
-                Editar producto
-              </button>
+                <p className="mt-3 text-lg font-semibold text-green-700">
+                  ${producto.price}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </MainLayout>
   )
 }

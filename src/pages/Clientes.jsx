@@ -1,35 +1,39 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import MainLayout from '../layouts/MainLayout'
-import { clientesIniciales } from '../data/clientes'
+import { getClientes, createCliente } from '../api/clientesApi'
 
 function Clientes() {
-  const [clientes, setClientes] = useState(clientesIniciales)
+  const [clientes, setClientes] = useState([])
   const [nombre, setNombre] = useState('')
   const [correo, setCorreo] = useState('')
-  const [telefono, setTelefono] = useState('')
   const [busqueda, setBusqueda] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const crearCliente = () => {
-    if (!nombre || !correo || !telefono) return
+  useEffect(() => {
+    getClientes()
+      .then(setClientes)
+      .catch(() => setError('Error al cargar clientes'))
+      .finally(() => setLoading(false))
+  }, [])
 
-    const nuevoCliente = {
-      id: Date.now(),
-      nombre,
-      correo,
-      telefono,
+  const crearCliente = async () => {
+    if (!nombre || !correo) return
+    try {
+      const nuevo = await createCliente({ nombre, correo })
+      setClientes([nuevo, ...clientes])
+      setNombre('')
+      setCorreo('')
+    } catch (e) {
+      alert(e.message)
     }
-
-    setClientes([nuevoCliente, ...clientes])
-    setNombre('')
-    setCorreo('')
-    setTelefono('')
   }
 
-  const clientesFiltrados = clientes.filter((cliente) => {
+  const clientesFiltrados = clientes.filter((c) => {
     const texto = busqueda.toLowerCase()
     return (
-      cliente.nombre.toLowerCase().includes(texto) ||
-      cliente.correo.toLowerCase().includes(texto)
+      c.name.toLowerCase().includes(texto) ||
+      c.email.toLowerCase().includes(texto)
     )
   })
 
@@ -54,14 +58,6 @@ function Clientes() {
           className="w-full rounded border p-2 md:w-1/4"
         />
 
-        <input
-          type="text"
-          placeholder="Teléfono"
-          value={telefono}
-          onChange={(e) => setTelefono(e.target.value)}
-          className="w-full rounded border p-2 md:w-1/4"
-        />
-
         <button
           onClick={crearCliente}
           className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
@@ -80,29 +76,33 @@ function Clientes() {
         />
       </div>
 
-      <div className="overflow-hidden rounded-lg bg-white shadow">
-        <table className="w-full">
-          <thead className="bg-slate-200 text-left">
-            <tr>
-              <th className="p-3">ID</th>
-              <th className="p-3">Nombre</th>
-              <th className="p-3">Correo</th>
-              <th className="p-3">Teléfono</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {clientesFiltrados.map((cliente) => (
-              <tr key={cliente.id} className="border-t">
-                <td className="p-3">{cliente.id}</td>
-                <td className="p-3">{cliente.nombre}</td>
-                <td className="p-3">{cliente.correo}</td>
-                <td className="p-3">{cliente.telefono}</td>
+      {loading ? (
+        <p className="text-slate-500">Cargando clientes...</p>
+      ) : error ? (
+        <p className="text-red-500">{error}</p>
+      ) : (
+        <div className="overflow-hidden rounded-lg bg-white shadow">
+          <table className="w-full">
+            <thead className="bg-slate-200 text-left">
+              <tr>
+                <th className="p-3">ID</th>
+                <th className="p-3">Nombre</th>
+                <th className="p-3">Correo</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+
+            <tbody>
+              {clientesFiltrados.map((cliente) => (
+                <tr key={cliente.id} className="border-t">
+                  <td className="p-3 text-xs text-slate-400">{cliente.id}</td>
+                  <td className="p-3">{cliente.name}</td>
+                  <td className="p-3">{cliente.email}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </MainLayout>
   )
 }
