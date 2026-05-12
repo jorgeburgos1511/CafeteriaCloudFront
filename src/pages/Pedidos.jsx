@@ -1,19 +1,27 @@
 import { useEffect, useState } from 'react'
 import MainLayout from '../layouts/MainLayout'
 import { getPedidos, createPedido, avanzarEstado } from '../api/pedidosApi'
+import { getClientes } from '../api/clientesApi'
+import { getProductos } from '../api/productosApi'
 
 function Pedidos() {
   const [pedidos, setPedidos] = useState([])
+  const [clientes, setClientes] = useState([])
+  const [productos, setProductos] = useState([])
   const [filtro, setFiltro] = useState('Todos')
-  const [cliente, setCliente] = useState('')
-  const [producto, setProducto] = useState('')
+  const [clienteSeleccionado, setClienteSeleccionado] = useState('')
+  const [productoSeleccionado, setProductoSeleccionado] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    getPedidos()
-      .then(setPedidos)
-      .catch(() => setError('Error al cargar pedidos'))
+    Promise.all([getPedidos(), getClientes(), getProductos()])
+      .then(([pedidosData, clientesData, productosData]) => {
+        setPedidos(pedidosData)
+        setClientes(clientesData)
+        setProductos(productosData.filter((p) => p.available))
+      })
+      .catch(() => setError('Error al cargar datos'))
       .finally(() => setLoading(false))
   }, [])
 
@@ -39,12 +47,12 @@ function Pedidos() {
   }
 
   const crearPedido = async () => {
-    if (!cliente || !producto) return
+    if (!clienteSeleccionado || !productoSeleccionado) return
     try {
-      const nuevo = await createPedido({ cliente, producto })
+      const nuevo = await createPedido({ cliente: clienteSeleccionado, producto: productoSeleccionado })
       setPedidos([nuevo, ...pedidos])
-      setCliente('')
-      setProducto('')
+      setClienteSeleccionado('')
+      setProductoSeleccionado('')
     } catch (e) {
       alert(e.message)
     }
@@ -61,21 +69,27 @@ function Pedidos() {
       <h1 className="mb-6 text-3xl font-bold text-slate-800">Pedidos</h1>
 
       <div className="mb-6 flex flex-wrap gap-2">
-        <input
-          type="text"
-          placeholder="Cliente"
-          value={cliente}
-          onChange={(e) => setCliente(e.target.value)}
+        <select
+          value={clienteSeleccionado}
+          onChange={(e) => setClienteSeleccionado(e.target.value)}
           className="w-full rounded border p-2 md:w-1/3"
-        />
+        >
+          <option value="">Seleccionar cliente...</option>
+          {clientes.map((c) => (
+            <option key={c.id} value={c.name}>{c.name}</option>
+          ))}
+        </select>
 
-        <input
-          type="text"
-          placeholder="Producto"
-          value={producto}
-          onChange={(e) => setProducto(e.target.value)}
+        <select
+          value={productoSeleccionado}
+          onChange={(e) => setProductoSeleccionado(e.target.value)}
           className="w-full rounded border p-2 md:w-1/3"
-        />
+        >
+          <option value="">Seleccionar producto...</option>
+          {productos.map((p) => (
+            <option key={p.id} value={p.name}>{p.name} — ${p.price}</option>
+          ))}
+        </select>
 
         <button
           onClick={crearPedido}
