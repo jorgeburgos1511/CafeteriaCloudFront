@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import MainLayout from '../layouts/MainLayout'
-import { getClientes, createCliente } from '../api/clientesApi'
+import { getClientes, createCliente, deleteCliente } from '../api/clientesApi'
 
 function Clientes() {
   const [clientes, setClientes] = useState([])
@@ -29,12 +29,19 @@ function Clientes() {
     }
   }
 
+  const eliminarCliente = async (id) => {
+    if (!confirm('¿Eliminar este cliente?')) return
+    try {
+      await deleteCliente(id)
+      setClientes(clientes.filter((c) => c.id !== id))
+    } catch (e) {
+      alert(e.message)
+    }
+  }
+
   const clientesFiltrados = clientes.filter((c) => {
     const texto = busqueda.toLowerCase()
-    return (
-      c.name.toLowerCase().includes(texto) ||
-      c.email.toLowerCase().includes(texto)
-    )
+    return c.name.toLowerCase().includes(texto) || c.email.toLowerCase().includes(texto)
   })
 
   return (
@@ -49,7 +56,6 @@ function Clientes() {
           onChange={(e) => setNombre(e.target.value)}
           className="w-full rounded border p-2 md:w-1/4"
         />
-
         <input
           type="email"
           placeholder="Correo"
@@ -57,7 +63,6 @@ function Clientes() {
           onChange={(e) => setCorreo(e.target.value)}
           className="w-full rounded border p-2 md:w-1/4"
         />
-
         <button
           onClick={crearCliente}
           className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
@@ -85,18 +90,24 @@ function Clientes() {
           <table className="w-full">
             <thead className="bg-slate-200 text-left">
               <tr>
-                <th className="p-3">ID</th>
                 <th className="p-3">Nombre</th>
                 <th className="p-3">Correo</th>
+                <th className="p-3">Acción</th>
               </tr>
             </thead>
-
             <tbody>
               {clientesFiltrados.map((cliente) => (
                 <tr key={cliente.id} className="border-t">
-                  <td className="p-3 text-xs text-slate-400">{cliente.id}</td>
                   <td className="p-3">{cliente.name}</td>
                   <td className="p-3">{cliente.email}</td>
+                  <td className="p-3">
+                    <button
+                      onClick={() => eliminarCliente(cliente.id)}
+                      className="rounded bg-red-500 px-3 py-1 text-sm text-white hover:bg-red-600"
+                    >
+                      Eliminar
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
