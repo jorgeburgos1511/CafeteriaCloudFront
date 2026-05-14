@@ -35,10 +35,10 @@ const colorPedido = (estado) => {
   }
 }
 
-function NuevoPedidoModal({ clientes, productos, onClose, onCreado }) {
+function PedidoModal({ clientes, productos, pedidoInicial, onClose, onActualizado, onCreado }) {
   const [clienteId, setClienteId] = useState('')
   const [productoSeleccionado, setProductoSeleccionado] = useState('')
-  const [pedido, setPedido] = useState(null)
+  const [pedido, setPedido] = useState(pedidoInicial || null)
   const [loading, setLoading] = useState(false)
 
   const clienteActual = clientes.find((c) => c.id === clienteId)
@@ -52,6 +52,7 @@ function NuevoPedidoModal({ clientes, productos, onClose, onCreado }) {
         cliente_email: clienteActual.email,
       })
       setPedido(nuevo)
+      onCreado(nuevo)
     } catch (e) {
       alert(e.message)
     } finally {
@@ -65,6 +66,7 @@ function NuevoPedidoModal({ clientes, productos, onClose, onCreado }) {
     try {
       const actualizado = await addItemToPedido(pedido.id, productoSeleccionado)
       setPedido(actualizado)
+      onActualizado(actualizado)
       setProductoSeleccionado('')
     } catch (e) {
       alert(e.message)
@@ -79,6 +81,7 @@ function NuevoPedidoModal({ clientes, productos, onClose, onCreado }) {
     try {
       const actualizado = await removeItemFromPedido(pedido.id, itemId)
       setPedido(actualizado)
+      onActualizado(actualizado)
     } catch (e) {
       alert(e.message)
     } finally {
@@ -91,7 +94,7 @@ function NuevoPedidoModal({ clientes, productos, onClose, onCreado }) {
     setLoading(true)
     try {
       const confirmado = await confirmarPedido(pedido.id)
-      onCreado(confirmado)
+      onActualizado(confirmado)
       onClose()
     } catch (e) {
       alert(e.message)
@@ -100,10 +103,19 @@ function NuevoPedidoModal({ clientes, productos, onClose, onCreado }) {
     }
   }
 
+  const cancelar = async () => {
+    if (pedido) {
+      try { await cancelarPedido(pedido.id); onActualizado({ ...pedido, estado: 'Cancelado' }) } catch {}
+    }
+    onClose()
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-        <h2 className="mb-4 text-xl font-bold text-slate-800">Nuevo Pedido</h2>
+        <h2 className="mb-4 text-xl font-bold text-slate-800">
+          {pedido ? 'Editar Pedido' : 'Nuevo Pedido'}
+        </h2>
 
         {!pedido ? (
           <div className="space-y-3">
@@ -114,9 +126,7 @@ function NuevoPedidoModal({ clientes, productos, onClose, onCreado }) {
             >
               <option value="">Seleccionar cliente...</option>
               {clientes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} — {c.email}
-                </option>
+                <option key={c.id} value={c.id}>{c.name} — {c.email}</option>
               ))}
             </select>
             <div className="flex gap-2">
@@ -128,7 +138,7 @@ function NuevoPedidoModal({ clientes, productos, onClose, onCreado }) {
                 Iniciar pedido
               </button>
               <button onClick={onClose} className="rounded bg-gray-200 px-4 py-2 text-gray-700">
-                Cancelar
+                Cerrar
               </button>
             </div>
           </div>
@@ -146,9 +156,7 @@ function NuevoPedidoModal({ clientes, productos, onClose, onCreado }) {
               >
                 <option value="">Agregar producto...</option>
                 {productos.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} — ${p.price}
-                  </option>
+                  <option key={p.id} value={p.id}>{p.name} — ${p.price}</option>
                 ))}
               </select>
               <button
@@ -194,10 +202,7 @@ function NuevoPedidoModal({ clientes, productos, onClose, onCreado }) {
                 Confirmar pedido
               </button>
               <button
-                onClick={async () => {
-                  try { await cancelarPedido(pedido.id) } catch {}
-                  onClose()
-                }}
+                onClick={cancelar}
                 disabled={loading}
                 className="rounded bg-red-500 px-4 py-2 text-white hover:bg-red-600"
               >
@@ -211,7 +216,7 @@ function NuevoPedidoModal({ clientes, productos, onClose, onCreado }) {
   )
 }
 
-function PedidoCard({ pedido, onActualizado }) {
+function PedidoCard({ pedido, onActualizado, onEditar }) {
   const [loading, setLoading] = useState(false)
 
   const todosEntregados =
@@ -314,6 +319,14 @@ function PedidoCard({ pedido, onActualizado }) {
 
       {(pedido.estado === 'Confirmado' || pedido.estado === 'Abierto') && (
         <div className="flex gap-2 border-t p-4">
+          {pedido.estado === 'Abierto' && (
+            <button
+              onClick={() => onEditar(pedido)}
+              className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+            >
+              Editar pedido
+            </button>
+          )}
           {pedido.estado === 'Confirmado' && todosEntregados && (
             <button
               onClick={handleFinalizar}
@@ -341,6 +354,7 @@ function Pedidos() {
   const [clientes, setClientes] = useState([])
   const [productos, setProductos] = useState([])
   const [filtro, setFiltro] = useState('Todos')
+  const [modalPedido, setModalPedido] = useState(null)
   const [mostrarModal, setMostrarModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -361,8 +375,15 @@ function Pedidos() {
   }
 
   const handleCreado = (nuevo) => {
-    setPedidos((prev) => [nuevo, ...prev])
+    setPedidos((prev) => {
+      if (prev.find((p) => p.id === nuevo.id)) return prev
+      return [nuevo, ...prev]
+    })
   }
+
+  const abrirNuevo = () => { setModalPedido(null); setMostrarModal(true) }
+  const abrirEditar = (pedido) => { setModalPedido(pedido); setMostrarModal(true) }
+  const cerrarModal = () => { setMostrarModal(false); setModalPedido(null) }
 
   const FILTROS = ['Todos', 'Abierto', 'Confirmado', 'Finalizado', 'Cancelado']
   const pedidosFiltrados =
@@ -376,7 +397,7 @@ function Pedidos() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-bold text-slate-800">Pedidos</h1>
         <button
-          onClick={() => setMostrarModal(true)}
+          onClick={abrirNuevo}
           className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
         >
           + Nuevo Pedido
@@ -402,16 +423,23 @@ function Pedidos() {
           <p className="text-slate-400">No hay pedidos con ese filtro.</p>
         ) : (
           pedidosFiltrados.map((pedido) => (
-            <PedidoCard key={pedido.id} pedido={pedido} onActualizado={handleActualizado} />
+            <PedidoCard
+              key={pedido.id}
+              pedido={pedido}
+              onActualizado={handleActualizado}
+              onEditar={abrirEditar}
+            />
           ))
         )}
       </div>
 
       {mostrarModal && (
-        <NuevoPedidoModal
+        <PedidoModal
           clientes={clientes}
           productos={productos}
-          onClose={() => setMostrarModal(false)}
+          pedidoInicial={modalPedido}
+          onClose={cerrarModal}
+          onActualizado={handleActualizado}
           onCreado={handleCreado}
         />
       )}
