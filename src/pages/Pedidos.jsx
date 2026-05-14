@@ -193,8 +193,15 @@ function NuevoPedidoModal({ clientes, productos, onClose, onCreado }) {
               >
                 Confirmar pedido
               </button>
-              <button onClick={onClose} className="rounded bg-gray-200 px-4 py-2 text-gray-700">
-                Cerrar
+              <button
+                onClick={async () => {
+                  try { await cancelarPedido(pedido.id) } catch {}
+                  onClose()
+                }}
+                disabled={loading}
+                className="rounded bg-red-500 px-4 py-2 text-white hover:bg-red-600"
+              >
+                Cancelar pedido
               </button>
             </div>
           </div>
@@ -321,7 +328,7 @@ function PedidoCard({ pedido, onActualizado }) {
             disabled={loading}
             className="rounded bg-red-500 px-4 py-2 text-sm text-white hover:bg-red-600 disabled:bg-gray-400"
           >
-            Cancelar
+            Cancelar pedido
           </button>
         </div>
       )}
