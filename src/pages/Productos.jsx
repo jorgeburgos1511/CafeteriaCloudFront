@@ -2,6 +2,39 @@ import { useEffect, useRef, useState } from 'react'
 import MainLayout from '../layouts/MainLayout'
 import { getProductos, createProducto, uploadImageProducto } from '../api/productosApi'
 
+function CambiarImagenBtn({ productoId, onActualizado }) {
+  const ref = useRef(null)
+  const [loading, setLoading] = useState(false)
+
+  const handleChange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setLoading(true)
+    try {
+      const actualizado = await uploadImageProducto(productoId, file)
+      onActualizado(actualizado)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setLoading(false)
+      ref.current.value = ''
+    }
+  }
+
+  return (
+    <>
+      <input ref={ref} type="file" accept="image/*" onChange={handleChange} className="hidden" />
+      <button
+        onClick={() => ref.current.click()}
+        disabled={loading}
+        className="mt-2 w-full rounded border border-slate-300 px-3 py-1 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+      >
+        {loading ? 'Subiendo...' : 'Cambiar imagen'}
+      </button>
+    </>
+  )
+}
+
 function Productos() {
   const [productos, setProductos] = useState([])
   const [nombre, setNombre] = useState('')
@@ -19,6 +52,10 @@ function Productos() {
       .catch(() => setError('Error al cargar productos'))
       .finally(() => setLoading(false))
   }, [])
+
+  const actualizarProducto = (actualizado) => {
+    setProductos((prev) => prev.map((p) => (p.id === actualizado.id ? actualizado : p)))
+  }
 
   const crearProducto = async () => {
     if (!nombre || !precio) return
@@ -133,6 +170,7 @@ function Productos() {
                   Disponible: {producto.available ? 'Sí' : 'No'}
                 </p>
                 <p className="mt-3 text-lg font-semibold text-green-700">${producto.price}</p>
+                <CambiarImagenBtn productoId={producto.id} onActualizado={actualizarProducto} />
               </div>
             </div>
           ))}
