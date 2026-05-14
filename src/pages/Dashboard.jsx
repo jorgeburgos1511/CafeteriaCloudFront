@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react'
 import MainLayout from '../layouts/MainLayout'
-import grafica from '../assets/images/grafica.jpg'
 import { getDashboard } from '../api/dashboardApi'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts'
 
 function Dashboard() {
   const [metricas, setMetricas] = useState({
@@ -11,6 +19,7 @@ function Dashboard() {
     total_clientes: 0,
     ordenes_completadas: 0,
     actividad_reciente: [],
+    pedidos_por_dia: [],
   })
 
   useEffect(() => {
@@ -44,16 +53,15 @@ function Dashboard() {
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="rounded-xl bg-white p-6 shadow xl:col-span-2">
-          <h2 className="mb-4 text-xl font-bold text-slate-800">Resumen operativo</h2>
+          <h2 className="mb-4 text-xl font-bold text-slate-800">Pedidos últimos 7 días</h2>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mb-6">
             <div className="rounded-lg bg-green-50 p-4">
               <p className="text-sm text-slate-500">Órdenes completadas</p>
               <p className="mt-2 text-2xl font-bold text-green-700">
                 {metricas.ordenes_completadas}
               </p>
             </div>
-
             <div className="rounded-lg bg-blue-50 p-4">
               <p className="text-sm text-slate-500">Clientes registrados</p>
               <p className="mt-2 text-2xl font-bold text-blue-700">
@@ -62,18 +70,22 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-            <img
-              src={grafica}
-              alt="Gráfica de resumen operativo"
-              className="h-64 w-full object-cover"
-            />
-          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={metricas.pedidos_por_dia} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="dia" tick={{ fontSize: 12, fill: '#64748b' }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+              <Tooltip
+                contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: 13 }}
+                formatter={(v) => [v, 'Pedidos']}
+              />
+              <Bar dataKey="pedidos" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
         <div className="rounded-xl bg-white p-6 shadow">
           <h2 className="mb-4 text-xl font-bold text-slate-800">Actividad reciente</h2>
-
           <div className="space-y-3">
             {metricas.actividad_reciente.length === 0 ? (
               <p className="text-sm text-slate-400">Sin actividad registrada</p>
