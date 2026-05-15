@@ -31,3 +31,9 @@ export const uploadImageProducto = async (id, file) => {
 
 export const deleteProducto = (id) =>
   apiFetch(`/products/${id}`, { method: 'DELETE' })
+
+export const updateProducto = (id, data) =>
+  apiFetch(`/products/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })

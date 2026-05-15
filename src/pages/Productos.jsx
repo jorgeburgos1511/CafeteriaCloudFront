@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import MainLayout from '../layouts/MainLayout'
-import { getProductos, createProducto, uploadImageProducto } from '../api/productosApi'
+import { getProductos, createProducto, uploadImageProducto, deleteProducto, updateProducto } from '../api/productosApi'
 
 function CambiarImagenBtn({ productoId, onActualizado }) {
   const ref = useRef(null)
@@ -40,6 +40,118 @@ const CAT_STYLE = {
   Comida: 'bg-amber-100 text-amber-700',
 }
 
+function ProductoCard({ producto, onActualizado, onEliminar }) {
+  const [editandoPrecio, setEditandoPrecio] = useState(false)
+  const [nuevoPrecio, setNuevoPrecio] = useState(String(producto.price))
+  const [guardando, setGuardando] = useState(false)
+  const precioRef = useRef(null)
+
+  const guardarPrecio = async () => {
+    const val = parseFloat(nuevoPrecio)
+    if (isNaN(val) || val <= 0) {
+      setNuevoPrecio(String(producto.price))
+      setEditandoPrecio(false)
+      return
+    }
+    if (val === producto.price) {
+      setEditandoPrecio(false)
+      return
+    }
+    setGuardando(true)
+    try {
+      const actualizado = await updateProducto(producto.id, {
+        name: producto.name,
+        price: val,
+        category: producto.category,
+        available: producto.available,
+      })
+      onActualizado(actualizado)
+    } catch (e) {
+      alert(e.message)
+      setNuevoPrecio(String(producto.price))
+    } finally {
+      setGuardando(false)
+      setEditandoPrecio(false)
+    }
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl bg-white shadow-sm border border-slate-100 hover:shadow-md hover:border-amber-200 transition-all group">
+      {producto.image_url ? (
+        <img
+          src={producto.image_url}
+          alt={producto.name}
+          className="h-44 w-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+        />
+      ) : (
+        <div className="flex h-44 items-center justify-center bg-gradient-to-br from-slate-100 to-slate-50 text-slate-300">
+          <span className="text-5xl">
+            {producto.category === 'Bebida' ? '🥤' : '🍽'}
+          </span>
+        </div>
+      )}
+
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <h2 className="text-base font-bold text-slate-800 leading-tight">{producto.name}</h2>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span
+              className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                CAT_STYLE[producto.category] ?? 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {producto.category}
+            </span>
+            <button
+              onClick={() => onEliminar(producto)}
+              title="Eliminar producto"
+              className="text-slate-300 hover:text-red-500 transition-colors p-0.5"
+            >
+              🗑
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mt-3">
+          {editandoPrecio ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-bold text-amber-600">$</span>
+              <input
+                ref={precioRef}
+                type="number"
+                value={nuevoPrecio}
+                onChange={(e) => setNuevoPrecio(e.target.value)}
+                onBlur={guardarPrecio}
+                onKeyDown={(e) => { if (e.key === 'Enter') precioRef.current.blur() }}
+                disabled={guardando}
+                autoFocus
+                className="w-20 rounded border border-amber-400 px-2 py-0.5 text-sm font-bold text-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-400"
+              />
+            </div>
+          ) : (
+            <button
+              onClick={() => { setNuevoPrecio(String(producto.price)); setEditandoPrecio(true) }}
+              title="Editar precio"
+              className="text-xl font-bold text-amber-600 hover:underline hover:text-amber-700 transition-colors"
+            >
+              ${producto.price}
+            </button>
+          )}
+          <span
+            className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+              producto.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+            }`}
+          >
+            {producto.available ? '● Disponible' : '● No disponible'}
+          </span>
+        </div>
+
+        <CambiarImagenBtn productoId={producto.id} onActualizado={onActualizado} />
+      </div>
+    </div>
+  )
+}
+
 function Productos() {
   const [productos, setProductos] = useState([])
   const [nombre, setNombre] = useState('')
@@ -60,6 +172,16 @@ function Productos() {
 
   const actualizarProducto = (actualizado) => {
     setProductos((prev) => prev.map((p) => (p.id === actualizado.id ? actualizado : p)))
+  }
+
+  const eliminarProducto = async (producto) => {
+    if (!window.confirm(`¿Eliminar "${producto.name}" del menú?`)) return
+    try {
+      await deleteProducto(producto.id)
+      setProductos((prev) => prev.filter((p) => p.id !== producto.id))
+    } catch (e) {
+      alert(e.message)
+    }
   }
 
   const crearProducto = async () => {
@@ -203,54 +325,12 @@ function Productos() {
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {productosFiltrados.map((producto) => (
-            <div
+            <ProductoCard
               key={producto.id}
-              className="overflow-hidden rounded-xl bg-white shadow-sm border border-slate-100 hover:shadow-md hover:border-amber-200 transition-all group"
-            >
-              {producto.image_url ? (
-                <img
-                  src={producto.image_url}
-                  alt={producto.name}
-                  className="h-44 w-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                />
-              ) : (
-                <div className="flex h-44 items-center justify-center bg-gradient-to-br from-slate-100 to-slate-50 text-slate-300">
-                  <span className="text-5xl">
-                    {producto.category === 'Bebida' ? '🥤' : '🍽'}
-                  </span>
-                </div>
-              )}
-
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <h2 className="text-base font-bold text-slate-800 leading-tight">
-                    {producto.name}
-                  </h2>
-                  <span
-                    className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-semibold ${
-                      CAT_STYLE[producto.category] ?? 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    {producto.category}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between mt-3">
-                  <p className="text-xl font-bold text-amber-600">${producto.price}</p>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      producto.available
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-600'
-                    }`}
-                  >
-                    {producto.available ? '● Disponible' : '● No disponible'}
-                  </span>
-                </div>
-
-                <CambiarImagenBtn productoId={producto.id} onActualizado={actualizarProducto} />
-              </div>
-            </div>
+              producto={producto}
+              onActualizado={actualizarProducto}
+              onEliminar={eliminarProducto}
+            />
           ))}
         </div>
       )}
