@@ -27,12 +27,17 @@ function CambiarImagenBtn({ productoId, onActualizado }) {
       <button
         onClick={() => ref.current.click()}
         disabled={loading}
-        className="mt-2 w-full rounded border border-slate-300 px-3 py-1 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+        className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:border-slate-300 transition-colors disabled:opacity-50"
       >
-        {loading ? 'Subiendo...' : 'Cambiar imagen'}
+        {loading ? 'Subiendo...' : '📷 Cambiar imagen'}
       </button>
     </>
   )
+}
+
+const CAT_STYLE = {
+  Bebida: 'bg-blue-100 text-blue-700',
+  Comida: 'bg-amber-100 text-amber-700',
 }
 
 function Productos() {
@@ -86,90 +91,163 @@ function Productos() {
 
   return (
     <MainLayout>
-      <h1 className="mb-6 text-3xl font-bold text-slate-800">Productos</h1>
-
-      <div className="mb-8 flex flex-wrap gap-3 rounded-xl bg-white p-4 shadow">
-        <input
-          type="text"
-          placeholder="Nombre del producto"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          className="w-full rounded border p-2 md:w-1/4"
-        />
-
-        <select
-          value={categoria}
-          onChange={(e) => setCategoria(e.target.value)}
-          className="w-full rounded border p-2 md:w-1/6"
-        >
-          <option value="Bebida">Bebida</option>
-          <option value="Comida">Comida</option>
-        </select>
-
-        <input
-          type="number"
-          placeholder="Precio"
-          value={precio}
-          onChange={(e) => setPrecio(e.target.value)}
-          className="w-full rounded border p-2 md:w-1/6"
-        />
-
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          onChange={(e) => setImagen(e.target.files[0] || null)}
-          className="w-full rounded border p-2 md:w-1/4"
-        />
-
-        <button
-          onClick={crearProducto}
-          className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
-        >
-          Agregar producto
-        </button>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-800">Productos</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Gestiona el menú de la cafetería</p>
+        </div>
+        <span className="text-sm text-slate-400 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm">
+          {productosFiltrados.length} producto{productosFiltrados.length !== 1 ? 's' : ''}
+        </span>
       </div>
 
+      {/* Formulario */}
+      <div className="mb-8 rounded-xl bg-white p-5 shadow-sm border border-slate-100">
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">
+          Agregar producto
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <div className="flex flex-col gap-1 flex-1 min-w-[160px]">
+            <label className="text-xs font-medium text-slate-500">Nombre</label>
+            <input
+              type="text"
+              placeholder="Ej. Café latte"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-slate-500">Categoría</label>
+            <select
+              value={categoria}
+              onChange={(e) => setCategoria(e.target.value)}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+            >
+              <option value="Bebida">Bebida</option>
+              <option value="Comida">Comida</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-slate-500">Precio ($)</label>
+            <input
+              type="number"
+              placeholder="0.00"
+              value={precio}
+              onChange={(e) => setPrecio(e.target.value)}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-amber-300"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
+            <label className="text-xs font-medium text-slate-500">Imagen (opcional)</label>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImagen(e.target.files[0] || null)}
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-500 file:mr-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-0.5 file:text-xs"
+            />
+          </div>
+
+          <div className="flex flex-col justify-end">
+            <button
+              onClick={crearProducto}
+              disabled={!nombre || !precio}
+              className="rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-40 transition-colors shadow-sm"
+            >
+              + Agregar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Filtros */}
       <div className="mb-6 flex flex-wrap gap-2">
         {['Todos', 'Bebida', 'Comida'].map((tipo) => (
           <button
             key={tipo}
             onClick={() => setFiltro(tipo)}
-            className={`rounded px-3 py-1 ${
-              filtro === tipo ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+              filtro === tipo
+                ? 'bg-amber-500 text-white shadow-sm'
+                : 'bg-white text-slate-600 border border-slate-200 hover:border-amber-300 hover:text-amber-700'
             }`}
           >
+            {tipo === 'Bebida' ? '🥤 ' : tipo === 'Comida' ? '🍽 ' : ''}
             {tipo}
           </button>
         ))}
       </div>
 
+      {/* Grid */}
       {loading ? (
-        <p className="text-slate-500">Cargando productos...</p>
+        <div className="flex items-center gap-3 text-slate-500 py-8">
+          <span className="animate-spin text-xl">⟳</span>
+          Cargando productos...
+        </div>
       ) : error ? (
-        <p className="text-red-500">{error}</p>
+        <div className="flex flex-col items-center py-16 text-center">
+          <span className="text-5xl mb-3">⚠️</span>
+          <p className="text-red-500 font-medium">{error}</p>
+          <p className="text-slate-400 text-sm mt-1">Verifica que el backend esté corriendo</p>
+        </div>
+      ) : productosFiltrados.length === 0 ? (
+        <div className="flex flex-col items-center py-16 text-center">
+          <span className="text-5xl mb-3">🍽</span>
+          <p className="text-slate-500 font-medium">No hay productos en esta categoría</p>
+          <p className="text-slate-400 text-sm mt-1">Agrega el primero con el formulario de arriba</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {productosFiltrados.map((producto) => (
-            <div key={producto.id} className="overflow-hidden rounded-xl bg-white shadow">
+            <div
+              key={producto.id}
+              className="overflow-hidden rounded-xl bg-white shadow-sm border border-slate-100 hover:shadow-md hover:border-amber-200 transition-all group"
+            >
               {producto.image_url ? (
                 <img
                   src={producto.image_url}
                   alt={producto.name}
-                  className="h-48 w-full object-cover"
+                  className="h-44 w-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
                 />
               ) : (
-                <div className="flex h-48 items-center justify-center bg-slate-200 text-slate-400 text-sm">
-                  Sin imagen
+                <div className="flex h-44 items-center justify-center bg-gradient-to-br from-slate-100 to-slate-50 text-slate-300">
+                  <span className="text-5xl">
+                    {producto.category === 'Bebida' ? '🥤' : '🍽'}
+                  </span>
                 </div>
               )}
+
               <div className="p-4">
-                <h2 className="text-xl font-bold text-slate-800">{producto.name}</h2>
-                <p className="mt-2 text-sm text-slate-500">Categoría: {producto.category}</p>
-                <p className="mt-1 text-sm text-slate-500">
-                  Disponible: {producto.available ? 'Sí' : 'No'}
-                </p>
-                <p className="mt-3 text-lg font-semibold text-green-700">${producto.price}</p>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <h2 className="text-base font-bold text-slate-800 leading-tight">
+                    {producto.name}
+                  </h2>
+                  <span
+                    className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-semibold ${
+                      CAT_STYLE[producto.category] ?? 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    {producto.category}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between mt-3">
+                  <p className="text-xl font-bold text-amber-600">${producto.price}</p>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      producto.available
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-red-100 text-red-600'
+                    }`}
+                  >
+                    {producto.available ? '● Disponible' : '● No disponible'}
+                  </span>
+                </div>
+
                 <CambiarImagenBtn productoId={producto.id} onActualizado={actualizarProducto} />
               </div>
             </div>
